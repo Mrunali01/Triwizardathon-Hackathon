@@ -40,8 +40,8 @@ A powerful web accessibility auditing tool that analyzes websites for WCAG compl
 ## 🛠️ Steps to Run the Project
 
 ### 🔹 1. Clone the Repository
-git clone https://github.com/your-username/web-accessibility-checker.git  
-cd web-accessibility-checker
+git clone https://github.com/Mrunali01/Triwizardathon-Hackathon.git  
+cd Triwizardathon-Hackathon  
 
 ### 🔹 2. Create virtual environment  
 python -m venv venv  
