@@ -18,16 +18,10 @@ A powerful web accessibility auditing tool that analyzes websites for WCAG compl
 
 ## 📸 Demo
 
-<img width="932" height="503" alt="image" src="https://github.com/user-attachments/assets/9c9f6e04-78e0-401b-bddb-dc151601b565" />
-
-
-<img width="922" height="491" alt="image" src="https://github.com/user-attachments/assets/85c0328b-f375-497f-8299-fdd328dcc5d8" />
-
-
-<img width="914" height="473" alt="image" src="https://github.com/user-attachments/assets/a092bad0-a19f-420d-a6fc-5e24f511ba43" />
-
-
-<img width="881" height="490" alt="image" src="https://github.com/user-attachments/assets/ffe66bbf-7c0b-4376-8ad3-a894e676dd22" />
+<img width="932" height="503" alt="image" src="https://github.com/user-attachments/assets/9c9f6e04-78e0-401b-bddb-dc151601b565" />  
+<img width="922" height="491" alt="image" src="https://github.com/user-attachments/assets/85c0328b-f375-497f-8299-fdd328dcc5d8" />  
+<img width="914" height="473" alt="image" src="https://github.com/user-attachments/assets/a092bad0-a19f-420d-a6fc-5e24f511ba43" />  
+<img width="881" height="490" alt="image" src="https://github.com/user-attachments/assets/ffe66bbf-7c0b-4376-8ad3-a894e676dd22" />  
 
 
 ---
@@ -43,4 +37,31 @@ A powerful web accessibility auditing tool that analyzes websites for WCAG compl
 
 ---
 
-## STEPS TO RUN THE PROJECT
+## 🛠️ Steps to Run the Project
+
+### 🔹 1. Clone the Repository
+git clone https://github.com/your-username/web-accessibility-checker.git  
+cd web-accessibility-checker
+
+### 🔹 2. Create virtual environment  
+python -m venv venv  
+.\venv\Scripts\Activate  
+
+### 🔹 3. Install backend dependencies  
+cd ai-service  
+pip install -r requirements.txt  
+playwright install  
+
+### 🔹 4. Install Frontend Dependencies  
+cd ../frontend  
+npm install  
+
+
+### 🔹 5. Run the application  
+➤ Start the Backend  
+cd ../ai-service  
+uvicorn backend:api --reload  
+
+➤ Start the Frontend  
+cd ../frontend  
+npm run dev  
