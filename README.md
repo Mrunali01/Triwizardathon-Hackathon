@@ -1,6 +1,4 @@
-# Triwizardathon-Hackathon
-
-# 🌐 Web Accessibility Checker
+# 🌐 SMART Web Accessibility Checker 
 
 A powerful web accessibility auditing tool that analyzes websites for WCAG compliance. It uses modern web scraping and AI-powered insights to identify accessibility issues and generate actionable suggestions.
 
