@@ -1,0 +1,13 @@
+langgraph
+langchain
+langchain-core
+langchain-groq
+playwright
+bs4
+python-dotenv
+fastapi[all]
+transformers
+torch
+Pillow
+requests
+beautifulsoup4
