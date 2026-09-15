@@ -1,9 +1,9 @@
 const Header = () => {
   return (
     <header className="py-[1rem] px-[2rem] bg-[#0d0d0d] border-b-[1px] border-solid">
-      <div className="max-w-[1200px] flex justify-between items-center">
+      <div className="max-w-[1200px] flex flex-wrap gap-4 justify-between items-center">
         <div className="flex items-center gap-[1rem]">
-          <div className="relative w-[50px] h-[50px] flex items-center justify-center">
+          <div className="relative shrink-0 w-[50px] h-[50px] flex items-center justify-center">
             <div className="w-full h-full absolute">
               <div className="w-full h-full animate-spin ring-1 border-[2px] border-solid border-[#00aaff] absolute border-r-[50%]"></div>
               <div className="w-[80%] h-[80%] absolute animate-spin top-[10%] left-[10%] ring-2 border-[2px] border-solid border-[#00aaff] border-r-[50%]"></div>

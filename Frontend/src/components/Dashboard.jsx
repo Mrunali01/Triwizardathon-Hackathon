@@ -5,16 +5,20 @@ import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-const Dashboard = ({ results, isScanning, url }) => {
+const Dashboard = ({ results, isScanning, url, altTextLoading }) => {
   const downloadCSV = () => {
     if (!results || !results.accessibilityReport?.issues) return;
 
-    const sanitize = (str) => (str || "").replace(/[\n\r]+/g, ' ').replace(/"/g, '""');
-    const header = "ID,Title,Severity,Description,Element,Suggestion\n";
-    const rows = results.accessibilityReport.issues.map(issue =>
-      `${issue.id},"${sanitize(issue.title)}",${issue.severity},"${sanitize(issue.description)}","${sanitize(issue.element)}","${sanitize(issue.suggestion)}"`
-    );
-    const csvContent = header + rows.join("\n");
+    const report = results.accessibilityReport;
+    const sanitize = (value) => {
+      let text = String(value ?? '').replace(/[\n\r]+/g, ' ');
+      if (/^[=+@\-\t]/.test(text)) text = "'" + text;
+      return `"${text.replace(/"/g, '""')}"`;
+    };
+    const header = ['ID', 'Title', 'Severity', 'Description', 'Element', 'Suggestion', 'WCAG', 'Why it matters', 'Why the fix helps', 'Confidence', 'Sources', 'Before score', 'After score'];
+    const rows = report.issues.map(issue => [issue.id, issue.title, issue.type, issue.description, issue.element, issue.suggestion, issue.wcagReference, issue.explanation?.why_it_matters, issue.explanation?.reasoning_summary, issue.explanation?.confidence, issue.explanation?.evidence.map(e => e.source).join('; '), report.comparison?.beforeScore, report.comparison?.afterScore]);
+    if (report.comparison && !rows.length) rows.push(Array(11).fill('').concat([report.comparison.beforeScore, report.comparison.afterScore]));
+    const csvContent = [header, ...rows].map(row => row.map(sanitize).join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     saveAs(blob, `AltTextReport-${new Date().toISOString().split('T')[0]}.csv`);
   };
@@ -24,57 +28,40 @@ const Dashboard = ({ results, isScanning, url }) => {
 
     const { url: scannedUrl, score, totalIssues, issues } = results.accessibilityReport;
     const doc = new jsPDF();
-
-    // Title
     doc.setFontSize(18);
     doc.setTextColor(40);
     doc.text("Alt Text Accessibility Report", 14, 20);
-
-    // Metadata section (no emojis)
     doc.setFontSize(12);
     doc.setTextColor(60);
     doc.text(`URL: ${scannedUrl}`, 14, 30);
     doc.text(`Score: ${score}`, 14, 37);
     doc.text(`Total Issues: ${totalIssues}`, 14, 44);
     doc.text(`Date: ${new Date().toLocaleString()}`, 14, 51);
-
-    // Table of issues
+    if (results.accessibilityReport.comparison) {
+      const c = results.accessibilityReport.comparison;
+      doc.text(`Before: ${c.beforeScore} / After: ${c.afterScore} / Change: ${c.scoreChange}`, 14, 58);
+    }
     const tableData = issues.map((issue, index) => [
       index + 1,
       issue.title,
       issue.severity,
-      issue.description,
+      `${issue.description}\n${issue.explanation?.why_it_matters || ''}\n${issue.wcagReference || ''}\nConfidence: ${issue.explanation?.confidence || 'Unavailable'}`,
       issue.element,
-      issue.suggestion,
+      `${issue.suggestion}\n${issue.explanation?.reasoning_summary || ''}\n${issue.explanation?.evidence.map(e => e.source).join('\n') || ''}`,
     ]);
-
     autoTable(doc, {
-      startY: 60,
+      startY: 65,
       head: [['#', 'Title', 'Severity', 'Description', 'Element', 'Suggestion']],
       body: tableData,
-      styles: {
-        fontSize: 9,
-        cellPadding: 3,
-      },
-      headStyles: {
-        fillColor: [33, 150, 243],
-        textColor: 255,
-        fontStyle: 'bold',
-      },
-      alternateRowStyles: {
-        fillColor: [245, 245, 245],
-      },
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [33, 150, 243], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
       columnStyles: {
-        0: { cellWidth: 10 },
-        1: { cellWidth: 35 },
-        2: { cellWidth: 20 },
-        3: { cellWidth: 45 },
-        4: { cellWidth: 35 },
-        5: { cellWidth: 45 },
+        0: { cellWidth: 10 }, 1: { cellWidth: 28 }, 2: { cellWidth: 17 },
+        3: { cellWidth: 42 }, 4: { cellWidth: 35 }, 5: { cellWidth: 40 },
       },
       margin: { top: 60 },
     });
-
     doc.save(`AccessibilityReport-${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
@@ -91,7 +78,7 @@ const Dashboard = ({ results, isScanning, url }) => {
         ) : (
           <>
             {/* Buttons */}
-            <div className="flex justify-end mb-4 space-x-4 no-print">
+            <div className="flex flex-wrap justify-end mb-4 gap-3 no-print">
               <button
                 onClick={downloadPDF}
                 className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition"
@@ -114,7 +101,7 @@ const Dashboard = ({ results, isScanning, url }) => {
 
             {/* Result Panel */}
             <div id="printable-report">
-              <ResultsPanel results={results} />
+              <ResultsPanel key={results.accessibilityReport?.scanId} results={results} altTextLoading={altTextLoading} />
             </div>
           </>
         )}

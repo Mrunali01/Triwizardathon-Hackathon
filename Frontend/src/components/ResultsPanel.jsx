@@ -1,8 +1,11 @@
 import { useState } from 'react';
+import IssueExplanation from './IssueExplanation';
+import ComparisonPanel from './ComparisonPanel';
 
-const ResultsPanel = ({ results }) => {
+const ResultsPanel = ({ results, altTextLoading }) => {
   const { accessibilityReport, altTextSuggestions } = results || {};
   const [selectedIssue, setSelectedIssue] = useState(null);
+
 
   if (!accessibilityReport) {
     return (
@@ -11,15 +14,6 @@ const ResultsPanel = ({ results }) => {
       </div>
     );
   }
-
-  const getSeverityColor = (severity) => {
-    switch (severity) {
-      case 'high': return 'text-red-400 bg-red-500/20 border-red-500/30';
-      case 'medium': return 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30';
-      case 'low': return 'text-blue-400 bg-blue-500/20 border-blue-500/30';
-      default: return 'text-blue-400 bg-blue-500/20 border-blue-500/30';
-    }
-  };
 
   const getScoreColor = (score) => {
     if (score >= 90) return 'text-green-400';
@@ -57,7 +51,7 @@ const ResultsPanel = ({ results }) => {
                 stroke={getScoreStroke(accessibilityReport.score)}
                 strokeWidth="8"
                 strokeLinecap="round"
-                strokeDasharray={`${(results.score / 100) * 314} 314`}
+                strokeDasharray={`${(accessibilityReport.score / 100) * 314} 314`}
                 className="transition-all duration-1000 ease-out drop-shadow-lg"
                 style={{ filter: `drop-shadow(0 0 10px ${getScoreStroke(accessibilityReport.score)})` }}
               />
@@ -76,7 +70,7 @@ const ResultsPanel = ({ results }) => {
               Accessibility Score
             </h3>
             <p className="text-gray-300 text-lg mb-1">
-              {accessibilityReport.totalIssues} issues found
+              {accessibilityReport.totalIssues} affected occurrences across {accessibilityReport.totalRules ?? accessibilityReport.issues.length} rule categories
             </p>
             <p className="text-gray-400">
               Scanned in {accessibilityReport.scanTime}
@@ -85,88 +79,43 @@ const ResultsPanel = ({ results }) => {
         </div>
       </div>
 
-      {/* Issues Section */}
-      <div>
-        <div className="space-y-4">
-          <div>
-            {Array.isArray(accessibilityReport.issues) ? (
-              <div className="space-y-4">
-                {accessibilityReport.issues.map((issue) => (
-                  <div
-                    key={issue.id}
-                    className={`bg-gray-800/30 backdrop-blur-sm border rounded-2xl p-6 cursor-pointer transition-all duration-300 hover:border-blue-400/50 hover:shadow-xl hover:shadow-blue-500/10 ${selectedIssue?.id === issue.id
-                      ? 'border-blue-400/50 shadow-xl shadow-blue-500/10'
-                      : 'border-gray-700/50'
-                      }`}
-                    onClick={() => setSelectedIssue(selectedIssue?.id === issue.id ? null : issue)}
-                  >
-                    {/* Issue Header */}
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center space-x-4">
-                        <div className={`w-3 h-3 rounded-full ${getSeverityColor(issue.severity).split(' ')[1]}`}></div>
-                        <div>
-                          <h4 className="text-lg sm:text-xl font-semibold text-white">
-                            {issue.title}
-                          </h4>
-                          <p className="text-gray-400 text-sm">
-                            {issue.count} instances
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className={`px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wide ${getSeverityColor(issue.severity)}`}>
-                        {issue.type}
-                      </div>
-                    </div>
-
-                    {/* Expanded Details */}
-                    {selectedIssue?.id === issue.id && (
-                      <div className="space-y-6 pt-6 border-t border-gray-700/50">
-                        <p className="text-gray-300 leading-relaxed">
-                          {issue.description}
-                        </p>
-
-                        {/* Code Snippet */}
-                        <div>
-                          <h5 className="text-blue-400 font-semibold mb-2 flex items-center">
-                            Found in:
-                          </h5>
-                          <div className="bg-gray-900/50 border border-gray-700/50 rounded-xl p-4 overflow-x-auto">
-                            <code className="text-gray-300 font-mono text-sm whitespace-pre-wrap">
-                              {issue.element}
-                            </code>
-                          </div>
-                        </div>
-
-                        {/* Suggestion */}
-                        <div>
-                          <h5 className="text-blue-400 font-semibold mb-2 flex items-center">
-                            AI Suggestion:
-                          </h5>
-                          <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-4 overflow-x-auto">
-                            <code className="text-blue-200 font-mono text-sm whitespace-pre-wrap">
-                              {issue.suggestion}
-                            </code>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
+      {accessibilityReport.scanSettings && <p className="text-gray-400">{accessibilityReport.scanSettings.device} | {accessibilityReport.scanSettings.viewport} | axe {accessibilityReport.scanSettings.axeVersion}. Score: {accessibilityReport.scanSettings.scoring}. Scores from other tools may use different rules and weights.</p>}
+      <p className="text-gray-300">{accessibilityReport.scanNotice} {accessibilityReport.incompleteChecks} checks need manual review.</p>
+      <p className="text-gray-400">{accessibilityReport.aiStatus}</p>
+      <ComparisonPanel comparison={accessibilityReport.comparison} notice={accessibilityReport.comparisonNotice} />
+      <div className="space-y-4">
+        {accessibilityReport.issues.map(issue => (
+          <div key={issue.id} className={`bg-gray-800/30 border rounded-2xl p-6 ${selectedIssue?.id === issue.id ? 'border-blue-400/50' : 'border-gray-700/50'}`}>
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <div>
+                <h4 className="text-lg sm:text-xl font-semibold text-white">{issue.title}</h4>
+                <p className="text-gray-400 text-sm">{issue.count} instances</p>
               </div>
-            ) : (
-              <div className="text-white whitespace-pre-wrap">
-                <h3 className="text-2xl sm:text-3xl font-bold text-blue-400 mb-4">🧠 AI Accessibility Report</h3>
-                <p>{results?.report || "No structured issues found. Check backend or LLM formatting."}</p>
+              <div className="px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wide text-blue-400 bg-blue-500/20 border border-blue-500/30">{issue.type}</div>
+            </div>
+            <button type="button" className="text-blue-300 underline focus-ring rounded px-2 py-1" aria-expanded={selectedIssue?.id === issue.id} onClick={() => setSelectedIssue(selectedIssue?.id === issue.id ? null : issue)}>Why is this an issue?</button>
+            {selectedIssue?.id === issue.id && (
+              <div className="space-y-6 pt-6 mt-4 border-t border-gray-700/50">
+                <p className="text-gray-300 leading-relaxed">{issue.description}</p>
+                <div>
+                  <h5 className="text-blue-400 font-semibold mb-2">Found in:</h5>
+                  <div className="bg-gray-900/50 border border-gray-700/50 rounded-xl p-4 overflow-x-auto"><code className="text-gray-300 font-mono text-sm whitespace-pre-wrap">{issue.element}</code></div>
+                </div>
+                <div>
+                  <h5 className="text-blue-400 font-semibold mb-2">Recommended fix:</h5>
+                  <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-4"><code className="text-blue-200 font-mono text-sm whitespace-pre-wrap">{issue.suggestion}</code></div>
+                </div>
+                <IssueExplanation issue={issue} />
               </div>
             )}
           </div>
-        </div>
+        ))}
       </div>
       {/* Alt Text Suggestions */}
       <div className="mt-8 space-y-4">
         <h3 className="text-2xl sm:text-3xl font-bold text-blue-400">🖼️ Alt Text Suggestions</h3>
-        {altTextSuggestions?.message ? (
+        {altTextLoading && !altTextSuggestions && <p className="text-gray-300" role="status">Generating image captions...</p>}
+        {altTextSuggestions?.error ? <p className="text-red-300">{altTextSuggestions.error}</p> : altTextSuggestions?.message ? (
           <p className="text-green-400">{altTextSuggestions.message}</p>
         ) : (
           <ul className="space-y-4">

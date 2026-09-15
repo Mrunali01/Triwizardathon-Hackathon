@@ -1,65 +1,127 @@
-# 🌐 Smart Web Accessibility Checker 
+# Triwizardathon-Hackathon
 
-A powerful web accessibility auditing tool that analyzes websites for WCAG compliance. It uses modern web scraping and AI-powered insights to identify accessibility issues and generate actionable suggestions.
+The existing React/Tailwind accessibility checker now has WCAG retrieval, evidence-backed issue explanations, and before/after comparison. Its dashboard, image-caption endpoint, and PDF/CSV/print exports are retained.
 
-## 🚀 Features
+## Run locally
 
-- ✅ **Automated Accessibility Scans** using Playwright
-- 🧠 **AI-Powered Analysis** with Groq LLM (via LangChain)
-- 📊 **Structured Reports** with severity tagging, code snippets, and fix suggestions
-- 📈 **Granular Scoring System** (Critical, Moderate, Low)
-- 🔄 **Real-time Response Streaming** on frontend
-- 📥 **Downloadable Report** as pdf, .csv or print
-- ⚡ Built with **React (Frontend)** + **FastAPI (Backend)**
+Use Python 3.11+ and Node 20.19+ or 22.12+. Run from the repository root:
 
----
+```powershell
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r Backend/requirements.txt
+python -m playwright install chromium
+cd Frontend
+npm ci
+cd ..
+python -m uvicorn backend:api --app-dir Backend --host 127.0.0.1 --port 8000
+```
 
-## 📸 Demo
+In a second terminal:
 
-<img width="932" height="503" alt="image" src="https://github.com/user-attachments/assets/9c9f6e04-78e0-401b-bddb-dc151601b565" />  
-<img width="922" height="491" alt="image" src="https://github.com/user-attachments/assets/85c0328b-f375-497f-8299-fdd328dcc5d8" />  
-<img width="914" height="473" alt="image" src="https://github.com/user-attachments/assets/a092bad0-a19f-420d-a6fc-5e24f511ba43" />  
-<img width="881" height="490" alt="image" src="https://github.com/user-attachments/assets/ffe66bbf-7c0b-4376-8ad3-a894e676dd22" />  
+```powershell
+cd Frontend
+npm run dev
+```
 
+Open http://localhost:5173. The checked-in WCAG corpus works offline; `npm ci` installs the pinned local axe script used by the backend. Browsing the target site requires network access. The caption feature retains BLIP and may download its model on first use; a caption-model failure does not prevent accessibility scans.
 
----
+Optional configuration: copy the example environment files to `Backend/.env` and `Frontend/.env` only if those files do not already exist. Keep existing secrets. No key is needed for scanning, retrieval, deterministic explanations, or comparison.
 
-## 🏗️ Tech Stack
+| Variable | Purpose / default |
+| --- | --- |
+| `OPENAI_API_KEY` | Optional OpenAI key; legacy `API_KEY` / `GROQ_API_KEY` are not used |
+| `OPENAI_MODEL` | `gpt-4.1-mini`; configurable for account/model availability |
+| `ENABLE_LLM` | `true`; set `false` to use only deterministic evidence explanations |
+| `WCAG_DB_PATH` | Optional SQLite vector index location; defaults to `Backend/data/wcag.sqlite` |
+| `SCAN_DB_PATH` | Optional report storage location; defaults to `Backend/data/scans.sqlite` |
+| `AXE_SCRIPT_PATH` | Optional local axe script path; defaults to `Frontend/node_modules/axe-core/axe.min.js` |
+| `CORS_ORIGINS` | Comma-separated browser origins; localhost and 127.0.0.1 on port 5173 by default |
+| `VITE_API_BASE_URL` | Frontend API address; `http://localhost:8000` |
 
-| Layer      | Tech                        |
-|------------|-----------------------------|
-| Frontend   | React, Tailwind CSS         |
-| Backend    | FastAPI, Pydantic           |
-| Scraper    | Playwright                  |
-| AI Model   | Groq LLM via LangGraph      |
+## Architecture
 
----
+```text
+React -> FastAPI -> existing LangGraph scan/analyze workflow
+  -> Playwright Chromium -> local axe-core violations and node evidence
+  -> WCAG retrieval -> deterministic explanations + optional OpenAI evidence selection
+  -> existing score/report -> SQLite report retention -> React issues and comparison
+  -> PDF / CSV / print
+```
 
-## 🛠️ Steps to Run the Project
+The original backend used requests/BeautifulSoup text extraction and asked an LLM to invent the scan report. Playwright was listed but unused; no axe scanner, vector store, streaming transport, or tests existed. The scan/analyze graph and endpoint are retained, with actual axe results replacing text-only issue inference. Requests/BeautifulSoup and BLIP still support the existing image-caption feature. The asynchronous browser fetch displays the report before captions complete; this is not token streaming.
 
-### 🔹 1. Clone the Repository
-git clone https://github.com/Mrunali01/Triwizardathon-Hackathon.git  
-cd Triwizardathon-Hackathon  
+- **Playwright** opens the target in one Chromium browser at a fixed 1280×720 viewport.
+- **axe-core 4.10.3** runs locally in that page and returns rule IDs, impacts, selectors, HTML, failed checks and available measurements. Incomplete checks are counted separately from violations.
+- **FastAPI** validates requests and runs the synchronous graph in a worker thread, including on Windows.
+- **LangGraph** retains the scan/analyze orchestration. **LangChain/OpenAI** optionally select supporting evidence from the retrieved context.
+- **React/Tailwind** retain the existing dark dashboard and add expandable explanations and comparison cards.
 
-### 🔹 2. Create virtual environment  
-python -m venv venv  
-.\venv\Scripts\Activate  
+## WCAG RAG
 
-### 🔹 3. Install backend dependencies  
-cd ai-service  
-pip install -r requirements.txt  
-playwright install  
+`Backend/ingest_wcag.py` downloads authoritative [WCAG 2.1](https://www.w3.org/TR/WCAG21/), [WCAG 2.2](https://www.w3.org/TR/WCAG22/), and selected HTML/ARIA techniques. The local JSON contains 167 documents: 78 WCAG 2.1 criteria, 86 WCAG 2.2 criteria, and three techniques. A/AA/AAA levels, category, version, criterion, title and source URLs are preserved. WCAG 2.2's removed 4.1.1 criterion is excluded from that version. See [source attribution](Backend/data/NOTICE.md).
 
-### 🔹 4. Install Frontend Dependencies  
-cd ../frontend  
-npm install  
+`Backend/rag.py` chunks documents into 180-word windows with 30-word overlap, computes normalized sparse TF-IDF embeddings, and stores vectors and metadata in SQLite. This is lexical vector retrieval, not a downloaded neural embedding model. Cosine similarity ranks the small local index in memory. A corpus fingerprint rebuilds stale indexes transactionally. Retrieval adds no Python dependencies or remote vector services. AI summaries use `langchain-openai==0.3.28`, compatible with the existing LangChain core.
 
+Curated axe rule mappings and axe WCAG tags constrain retrieval to matching criteria. Runtime recommendations use WCAG 2.2; the corpus also retains 2.1 source material. Without metadata matches, similarity below 0.32 is rejected; similarity-only matches are explicitly related guidance, not confirmed violations. A missing/corrupt/unwritable index produces scanner-only explanations with Low confidence. No criterion is generated by the LLM.
 
-### 🔹 5. Run the application  
-➤ Start the Backend  
-cd ../ai-service  
-uvicorn backend:api --reload  
+Refresh the corpus deliberately (network required):
 
-➤ Start the Frontend  
-cd ../frontend  
-npm run dev  
+```powershell
+python Backend/ingest_wcag.py
+```
+
+The next scan rebuilds the index if necessary. The ingestion command rejects incomplete downloads before replacing the existing corpus.
+
+## Explainable recommendations
+
+Each original issue retains its existing title, description, element, suggestion and occurrence count, plus `rule_id`, `detected_evidence`, `wcagReference`, and a Pydantic-validated `explanation`. Expand **Why is this an issue?** to see what is wrong, impact, affected users, WCAG criteria/levels, node evidence, the fix, why it helps, confidence and linked source excerpts. Contrast measurements are taken from axe's recorded checks, never guessed.
+
+Curated actions are selected only when their criteria are retrieved. Other rules retain the recorded scanner evidence and request manual assessment. If enabled and configured, OpenAI receives scanner descriptions, recommended actions and retrieved evidence in one bounded request (up to 20 issues). It selects exact scanner and WCAG excerpts; each quote and evidence index is validated before display. Invented text is rejected. These are concise public evidence summaries, not hidden chain-of-thought. Timeouts, malformed responses and absent keys preserve the core scan and deterministic explanations.
+
+Confidence measures **system confidence in the recommendation**, not a probability of WCAG conformance. It is deterministic: scanner evidence 20 points, criterion match 25, curated rule match 20, cosine similarity up to 15, version consistency 10, and curated-action consistency 10. High is ≥80, Medium ≥50, otherwise Low. Similarity-only matches are capped at 49; missing evidence receives 15. The model never chooses confidence.
+
+## Before / after workflow
+
+1. Scan a URL. The complete report is retained in local SQLite and its random scan ID is saved in this browser's local storage.
+2. Fix the target website.
+3. Scan the same URL again, even after a browser refresh. The browser sends its preceding scan ID.
+4. See scores, score change, total and critical/serious/moderate/minor occurrence counts, and resolved/remaining/new rule lists.
+
+Comparison is a simple set difference over `rule_id`. A disappearing rule is resolved, a rule in both scans remains, and a new rule is newly detected. It does not claim to match individual DOM nodes. The summary is generated directly from statistics without an LLM. Each successful scan becomes the next baseline. URLs are normalized for host/default port/fragment, while paths and query strings remain distinct. Different scanner profiles cannot be compared. Missing baselines establish a new baseline; storage failures are reported without dropping current results. Baseline IDs are browser-specific, avoiding automatic comparisons against another user's scan.
+
+The existing score formula remains `max(0, 100 - 15 × high occurrences - 7 × moderate - 3 × low)`: axe critical and serious map to former high, minor maps to former low. Native four-level counts remain separate in comparison. A score of 100 is not proof of accessibility; automated coverage is incomplete and manual testing remains necessary.
+
+PDF and CSV exports retain the existing fields and include WCAG/level, impact explanation, fix rationale, confidence, sources and before/after scores. CSV values are quoted and spreadsheet-formula prefixes escaped. Print retains the rendered report.
+
+## API changes
+
+- `POST /check-accessibility`: existing `{ "url": "https://example.com" }` works; optionally send `previous_scan_id`. The report adds `scanId`, `scannedAt`, `scanProfile`, `severityCounts`, `incompleteChecks`, evidence/explanations, `aiStatus`, `comparison`, and `comparisonNotice`. Invalid URLs return 422; scanner failures return 502 instead of a fabricated result.
+- `GET /scans/{scan_id}`: retrieve a retained report; 404 if missing, 503 if storage is unavailable.
+- `POST /generate-alt-text`: existing contract retained; BLIP is loaded only when there are images needing captions.
+
+No standalone comparison service or duplicate scan representation is introduced. These endpoints are intended for local use; authentication, public-service network isolation, and multi-user retention policies are outside this upgrade.
+
+## Validation
+
+```powershell
+python -m unittest discover -s Backend/tests -v
+python Backend/tests/live_workflow.py
+cd Frontend
+npm run build
+npm run lint
+```
+
+The unit/API suite covers corpus metadata, chunking, retrieval, unknown evidence, grounding, deterministic confidence, LLM failure/fabrication/valid output, score/count changes, rule set differences, incompatible scans, persistence and endpoint validation. There was no existing test suite to migrate.
+
+The live test starts temporary FastAPI, Vite and fixture servers on ports 8011, 5175 and 8766. It uses real Chromium/axe and the React UI, fixes the fixture, reloads to check persistence, performs a second scan, verifies rule changes and confidence, downloads PDF/CSV, checks caption fallback and mobile overflow, and terminates its own servers. It disables OpenAI for repeatability. In validation, score improved **55 → 70**, with **two resolved rules, one remaining and one new**.
+
+## Limitations
+
+- Sparse embeddings are lightweight lexical retrieval; curated rule/tag matches supply precision. The technique collection is intentionally limited, and unsupported rules require manual assessment.
+- Only the rendered page at the fixed viewport is scanned; this does not crawl all routes or validate every interactive state. Scanning waits for DOM content and then up to 10 seconds for resources, without requiring network idle. Slow resources produce a visible partial-load notice; navigation failures produce actionable errors.
+- Screenshots of scanned sites and AI change summaries were optional and are omitted; comparison uses actual scores and rule IDs.
+- BLIP model availability and OpenAI availability are independent of the scanner. Caption quality still requires human review. Supply a valid `OPENAI_API_KEY` to enable live AI evidence summaries. Mocked valid-output, failure and fabrication tests pass, and the real scanner fallback was verified.
+- Existing dependency versions have npm audit findings. No broad dependency upgrade was mixed into this feature change. Vite recommends a newer Node version than the locally installed 20.16; the build nevertheless passed locally.
+
+Rendering readiness: after document loading, the scanner waits up to 20 seconds for visible text or media/form content, then allows DOM insertions to settle for 2?8 seconds. Blank application shells return an error instead of an inflated score. Scan settings and rule-category/occurrence totals are displayed to help compare tools; the existing score formula is unchanged.

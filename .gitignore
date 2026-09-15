@@ -1,0 +1,8 @@
+venv/
+.venv/
+**/__pycache__/
+**/.env
+**/node_modules/
+**/dist/
+Backend/data/*.sqlite*
+Backend/data/screenshots/

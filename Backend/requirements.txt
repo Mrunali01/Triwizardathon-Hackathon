@@ -1,7 +1,7 @@
 langgraph
 langchain
 langchain-core
-langchain-groq
+langchain-openai==0.3.28
 playwright
 bs4
 python-dotenv

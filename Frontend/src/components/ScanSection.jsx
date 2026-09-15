@@ -6,8 +6,7 @@ const ScanSection = ({ onScan, isScanning }) => {
 
   const validateUrl = (inputUrl) => {
     try {
-      new URL(inputUrl);
-      return true;
+      return ['http:', 'https:'].includes(new URL(inputUrl).protocol);
     } catch {
       return false;
     }
@@ -49,7 +48,8 @@ const ScanSection = ({ onScan, isScanning }) => {
           <div className="max-w-4xl mx-auto mb-8">
             <div className="relative group">
               <input
-                type="text"
+                type="url"
+                aria-label="Website URL"
                 className={`w-full px-6 py-4 sm:px-8 sm:py-6 text-lg sm:text-xl bg-gray-900/50 backdrop-blur-xl border-2 rounded-2xl text-white placeholder-gray-400 outline-none transition-all duration-300 ${isValid
                   ? 'border-blue-500/30 focus:border-blue-400 focus:shadow-2xl focus:shadow-blue-500/20'
                   : 'border-red-500/50 focus:border-red-400'
