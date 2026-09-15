@@ -1,4 +1,4 @@
-# Smart Web Accessibility Checker
+# AccessInsight - Smart Web Accessibility Checker
 
 Smart Web Accessibility Checker is a full-stack accessibility auditing application. Give it a public URL and it opens the rendered page in Chromium, runs `axe-core`, and turns detected violations into a readable report with WCAG references, affected elements, evidence, and recommended fixes.
 
