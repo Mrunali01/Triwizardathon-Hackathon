@@ -222,23 +222,3 @@ python Backend/tests/live_workflow.py
 
 The live test starts temporary FastAPI, Vite, and fixture servers; runs real Chromium and axe; performs two scans; verifies comparison persistence; checks PDF/CSV downloads, caption fallback, and mobile overflow; then stops its servers. It disables OpenAI for repeatable results.
 
-## Troubleshooting
-
-| Problem | Resolution |
-| --- | --- |
-| `Could not import module "backend"` | Run Uvicorn from the repository root with `--app-dir Backend` |
-| `Chromium is missing` | Activate the virtual environment and run `python -m playwright install chromium` |
-| `axe-core is missing` | Run `npm ci` inside `Frontend` |
-| Scan returns a network or HTTP error | Confirm the URL opens locally and permits automated browser access |
-| OpenAI summaries are unavailable | Check the key, model, and `ENABLE_LLM`; scanning still works without them |
-| Frontend cannot reach the API | Confirm Uvicorn uses port 8000 and `VITE_API_BASE_URL` matches |
-
-## Limitations
-
-- One rendered page is scanned at a desktop 1280 x 720 viewport; the application does not crawl a whole site.
-- Automated rules cannot validate every WCAG requirement or interactive state.
-- Sparse retrieval is lightweight and local, but has less semantic coverage than a dedicated embedding model.
-- Scan history uses local SQLite without authentication or multi-user retention controls.
-- BLIP suggestions and OpenAI summaries depend on model availability and require human review.
-
-WCAG source and attribution details are in [`Backend/data/NOTICE.md`](Backend/data/NOTICE.md). Runtime databases are generated locally and excluded from version control.
